@@ -5,7 +5,7 @@ from pickle import dump, load
 from die import *
 from os import path
 import sys
-from sys import path, argv, exit
+from sys import argv, exit
 import crapsResources_rc
 import PyQtStarterResources_rc
 from PyQt5 import QtGui, uic
@@ -61,6 +61,10 @@ class Craps(QMainWindow):
                 else:
                     self.quitCounter = 0
                     event.ignore()
+
+    def restartGame(self):
+        if self.createLogFile:
+            self.logger.debug("Restarting program")
 
     def saveGame(self):
         if self.createLogFile:
