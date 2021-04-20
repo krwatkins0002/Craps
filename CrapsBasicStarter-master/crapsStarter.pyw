@@ -1,10 +1,20 @@
 #!/usr/bin/env python
 
+from logging import basicConfig, getLogger, DEBUG, INFO, CRITICAL
+from pickle import dump, load
 from die import *
+from os import path
 import sys
+from sys import path, argv, exit
 import crapsResources_rc
+import PyQtStarterResources_rc
 from PyQt5 import QtGui, uic
-from PyQt5.QtWidgets import QMainWindow, QApplication
+from PyQt5.QtCore import pyqtSlot, QSettings, Qt, QTimer, QCoreApplication
+from PyQt5.QtWidgets import QMainWindow, QApplication, QMessageBox, QDialog
+
+logFileNameDefault = 'pyQtStarter.log'
+createLogFileDefault = False
+pickleFilenameDefault = ".PyQtStarterSavedObjects.pl"
 
 
 class Craps(QMainWindow):
@@ -37,6 +47,38 @@ class Craps(QMainWindow):
         self.winsCountValueUI.setText(str(self.numberOfWins))
         self.currentBankValueUI.setText(str(self.currentBank))
 
+    def closeEvent(self, event):
+        if self.createLogFile:
+            self.logger.debug("Closing app event")
+            if self.quitCounter == 0:
+                self.quitCounter += 1
+                quitMessage = "Are you sure you want to quit?"
+                reply = QMessageBox.question(self, 'message', quitMessage, QMessageBox.Yes,
+                                             QMessageBox.No)
+                if reply == QMessageBox.Yes:
+                    self.saveGame()
+                    event.accept()
+                else:
+                    self.quitCounter = 0
+                    event.ignore()
+
+    def saveGame(self):
+        if self.createLogFile:
+            self.logger.debug("Saving program state")
+            saveItems = (self.die1,
+                         self.die2,
+                         self.numberOfWins,
+                         self.currentBet,
+                         self.rollValue,
+                         self.rollButtonClickedHandler,
+                         self.currentBank)
+            if self.appSettings.contains('pickleFilename'):
+                with open(path.join(path.dirname(path.realpath(__file__)),
+                                    self.appSettings.value('pickleFilename', type=str)), 'wb') as pickleFile:
+                    dump(saveItems, pickleFile)
+            elif self.createLogFile:
+                self.logger.critical("No pickle Filename")
+
     # Player asked for another roll of the dice.
     def rollButtonClickedHandler(self):
         print("Roll button clicked")
@@ -54,10 +96,30 @@ class Craps(QMainWindow):
         self.updateUI()
 
 
-
 if __name__ == "__main__":
-    app = QApplication(sys.argv)
-    crapsApp = Craps()
-    crapsApp.updateUI()
-    crapsApp.show()
-    sys.exit(app.exec_())
+    QCoreApplication.setOrganizationName("Watkins Software");
+    QCoreApplication.setOrganizationDomain("kylerobertwatkins.com");
+    QCoreApplication.setApplicationName("Craps");
+    appSettings = QSettings()
+    if appSettings.contains('createLogFile'):
+        createLogFile = appSettings.value('createLogFile')
+    else:
+        createLogFile = createLogFileDefault
+        appSettings.setValue('createLogFile', createLogFile)
+
+    if createLogFile:
+        startingFolderName = path.dirname(path.realpath(__file__))
+        if appSettings.contains('logFile'):
+            logFilename = appSettings.value('logFile', type=str)
+        else:
+            logFilename = logFileNameDefault
+            appSettings.setValue('logFile', logFilename)
+        basicConfig(filename=path.join(startingFolderName, logFilename), level=INFO,
+                    format='%(asctime)s %(name)-8s %(levelname)-8s %(message)s')
+    app = QApplication(argv)
+    PyQtStarterApp = Craps()
+    PyQtStarterApp.updateUI()
+    PyQtStarterApp.show()
+    exit(app.exec_())
+
+
