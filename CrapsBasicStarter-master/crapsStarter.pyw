@@ -12,7 +12,9 @@ from PyQt5 import QtGui, uic
 from PyQt5.QtCore import pyqtSlot, QSettings, Qt, QTimer, QCoreApplication
 from PyQt5.QtWidgets import QMainWindow, QApplication, QMessageBox, QDialog
 
-logFileNameDefault = 'pyQtStarter.log'
+startingDummyVariableDefault = 100
+textOutputDefault = " ---- "
+logFilenameDefault = 'CrapsGame.log'
 createLogFileDefault = False
 pickleFilenameDefault = ".PyQtStarterSavedObjects.pl"
 
@@ -41,11 +43,73 @@ class Craps(QMainWindow):
 
         return "Die1: %s\nDie2: %s" % (self.die1, self.die2)
 
+
+
     def updateUI(self):
         self.die1View.setPixmap(QtGui.QPixmap(":/" + str(self.die1.getValue())))
         self.die2View.setPixmap(QtGui.QPixmap(":/" + str(self.die2.getValue())))
         self.winsCountValueUI.setText(str(self.numberOfWins))
         self.currentBankValueUI.setText(str(self.currentBank))
+
+
+
+    @pyqtSlot()  # Player asked to quit the game.
+    def closeEvent(self, event):
+        if self.createLogFile:
+            self.logger.debug("Closing app event")
+        if self.quitCounter == 0:
+            self.quitCounter += 1
+            quitMessage = "Are you sure you want to quit?"
+            reply = QMessageBox.question(self, 'Message', quitMessage, QMessageBox.Yes, QMessageBox.No)
+
+            if reply == QMessageBox.Yes:
+                self.saveGame()
+                event.accept()
+            else:
+                self.quitCounter = 0
+                event.ignore()
+
+    def restoreSettings(self):
+        if appSettings.contains('createLogFile'):
+            self.createLogFile = appSettings.value('createLogFile')
+        else:
+            self.createLogFile = createLogFileDefault
+            appSettings.setValue('createLogFile', self.createLogFile)
+
+        if self.createLogFile:
+            self.logger.debug("Starting restoreSettings")
+        # Restore settings values, write defaults to any that don't already exist.
+        self.dummyVariable = True
+        self.textOutput = ""
+        if self.appSettings.contains('dummyVariable'):
+            self.dummyVariable = self.appSettings.value('dummyVariable', type=int)
+        else:
+            self.dummyVariable = startingDummyVariableDefault
+            self.appSettings.setValue('dummyVariable', self.dummyVariable)
+
+        if self.appSettings.contains('textOutput'):
+            self.textOutput = self.appSettings.value('textOutput', type=str)
+        else:
+            self.textOutput = textOutputDefault
+            self.appSettings.setValue('textOutput', self.textOutput)
+
+        if self.appSettings.contains('createLogFile'):
+            self.createLogFile = self.appSettings.value('createLogFile')
+        else:
+            self.createLogFile = logFilenameDefault
+            self.appSettings.setValue('createLogFile', self.createLogFile)
+
+        if self.appSettings.contains('logFile'):
+            self.logFilename = self.appSettings.value('logFile', type=str)
+        else:
+            self.logFilename = logFilenameDefault
+            self.appSettings.setValue('logFile', self.logFilename)
+
+        if self.appSettings.contains('pickleFilename'):
+            self.pickleFilename = self.appSettings.value('pickleFilename', type=str)
+        else:
+            self.pickleFilename = pickleFilenameDefault
+            self.appSettings.setValue('pickleFilename', self.pickleFilename)
 
     def closeEvent(self, event):
         if self.createLogFile:
@@ -116,7 +180,7 @@ if __name__ == "__main__":
         if appSettings.contains('logFile'):
             logFilename = appSettings.value('logFile', type=str)
         else:
-            logFilename = logFileNameDefault
+            logFilename = logFilenameDefault
             appSettings.setValue('logFile', logFilename)
         basicConfig(filename=path.join(startingFolderName, logFilename), level=INFO,
                     format='%(asctime)s %(name)-8s %(levelname)-8s %(message)s')
